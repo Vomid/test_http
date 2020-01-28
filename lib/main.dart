@@ -1,6 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'show_code.dart';
+import 'dart:convert';
+
+class Anime{
+  final String title;
+  final String director;
+  final String description;
+
+  Anime({this.title, this.director, this.description});
+
+  factory Anime.fromJson(Map<String, dynamic> json) {
+    return Anime(
+      title: json['title'],
+      director: json['director'],
+      description: json['description'],
+    );
+  }
+}
 
 class TestHttp extends StatefulWidget {
   final String url;
@@ -14,8 +31,8 @@ class TestHttp extends StatefulWidget {
 class TestHttpState extends State<TestHttp> {
   final _formKey = GlobalKey<FormState>();
 
-  String _url, _body;
-  int _status;
+  String _url;
+  Anime _anime;
 
   @override
   void initState() {
@@ -23,83 +40,41 @@ class TestHttpState extends State<TestHttp> {
     super.initState();
   }//initState
 
-  _sendRequestGet() {
-    if(_formKey.currentState.validate()) {
-      _formKey.currentState.save();//update form data
+  _sendRequestGet(){
+    http.get(_url).then((response) {
+      _anime = Anime.fromJson(json.decode(response.body));
 
-      http.get(_url).then((response){
-        _status = response.statusCode;
-        _body = response.body;
+      setState(() {}); //reBuildWidget
+    }).catchError((error) {
+      _anime = Anime(
+        title: '',
+        description: error.toString(),
+        director: '',
+      );
 
-        setState(() {});//reBuildWidget
-      }).catchError((error){
-        _status = 0;
-        _body = error.toString();
+      setState(() {});
+    });
+}
 
-        setState(() {});//reBuildWidget
-      });
-    }
-  }//_sendRequestGet
-
-  _sendRequestPost() async {
-    if(_formKey.currentState.validate()) {
-      _formKey.currentState.save();//update form data
-
-      try {
-        var response = await http.post(_url);
-
-        _status = response.statusCode;
-        _body = response.body;
-      } catch (error) {
-        _status = 0;
-        _body = error.toString();
-      }
-      setState(() {});//reBuildWidget
-    }
-  }//_sendRequestPost
-
-  _sendRequestPostBodyHeaders() async {
-    if(_formKey.currentState.validate()) {
-      _formKey.currentState.save();//update form data
-
-      try {
-        var response = await http.post(_url,
-                      body: {'name':'test','num':'10'},
-                      headers: {'Accept':'application/json'}
-                      );
-
-        _status = response.statusCode;
-        _body = response.body;
-      } catch (error) {
-        _status = 0;
-        _body = error.toString();
-      }
-      setState(() {});//reBuildWidget
-    }
-  }//_sendRequestPost
 
 
   Widget build(BuildContext context) {
     return Form(key: _formKey, child: SingleChildScrollView(child: Column(
       children: <Widget>[
         Container(
-            child: Text('API url', style: TextStyle(fontSize: 20.0,color: Colors.blue)),
+            child: Text('Ссылка на API', style: TextStyle(fontSize: 20.0,color: Colors.blue)),
             padding: EdgeInsets.all(10.0)
         ),
         Container(
-            child: TextFormField(initialValue: _url, validator: (value){if (value.isEmpty) return 'API url isEmpty';}, onSaved: (value){_url = value;}, autovalidate: true),
+            child: TextFormField(initialValue: _url, validator: (value){if (value.isEmpty) return 'Поле не может быть пустым';}, onSaved: (value){_url = value;}, autovalidate: true),
             padding: EdgeInsets.all(10.0)
         ),
         SizedBox(height: 20.0),
-        RaisedButton(child: Text('Send request GET'), onPressed: _sendRequestGet),
-        RaisedButton(child: Text('Send request POST'), onPressed: _sendRequestPost),
-        RaisedButton(child: Text('Send request POST with Body and Headers'), onPressed: _sendRequestPostBodyHeaders),
-        SizedBox(height: 20.0),
-        Text('Response status', style: TextStyle(fontSize: 20.0,color: Colors.blue)),
-        Text(_status == null ? '' :_status.toString()),
-        SizedBox(height: 20.0),
-        Text('Response body', style: TextStyle(fontSize: 20.0,color: Colors.blue)),
-        Text(_body == null ? '' : _body),
+        RaisedButton(child: Text('Послать запрос'), onPressed: _sendRequestGet),
+        Text('Информация', style: TextStyle(fontSize: 20.0,color: Colors.blue)),
+        Text(_anime == null ? '' : _anime.title),
+        Text(_anime == null ? '' : _anime.description),
+        Text(_anime == null ? '' : _anime.director),
       ],
     )));
   }//build
@@ -110,12 +85,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: Text('Test HTTP API'),
+          title: Text('Экзамен'),
           actions: <Widget>[IconButton(icon: Icon(Icons.code), tooltip: 'Code', onPressed: (){
             Navigator.push(context, MaterialPageRoute(builder: (context) => CodeScreen()));
           })],
         ),
-        body: TestHttp(url: 'https://json.flutter.su/echo')
+        body: TestHttp(url: 'https://ghibliapi.herokuapp.com/films/58611129-2dbc-4a81-a72f-77ddfc1b1b49')
     );
   }
 }
